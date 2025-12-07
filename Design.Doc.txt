@@ -2,5 +2,20 @@ Goal: Protect my web search from other users on my local network
 + Domain
 + data packets
 
-abstract idea:
+
+The system captures IP packets via a TUN interface, encrypts the payload, and 
+encapsulates them in UDP datagrams for transport
+
+
+TUN interface (tun0)
+
+Phase 1: interceptor
+
+
+Phase 2:
+
+Phase 3:
+
+
+Phase 4:
 
