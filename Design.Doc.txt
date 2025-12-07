@@ -1,0 +1,6 @@
+Goal: Protect my web search from other users on my local network
++ Domain
++ data packets
+
+abstract idea:
+
