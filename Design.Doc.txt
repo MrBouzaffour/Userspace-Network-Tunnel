@@ -7,15 +7,33 @@ The system captures IP packets via a TUN interface, encrypts the payload, and
 encapsulates them in UDP datagrams for transport
 
 
-TUN interface (tun0)
+Getting the data
 
-Phase 1: interceptor
+in linux everything is a file
+we need to open `dev/net/tun` to get the file descriptor
+
+#include <sys/ioctl.h>
++ `ioctl()`
+return value : 0 on success, -1 and errno on fail
+Flag : IFF_TUN for the IP packets
 
 
-Phase 2:
+Handling the data
 
-Phase 3:
+while (1)
+{
+	select()
+	{
+		read() from the TUN file descriptor into a buffer
+		encrypt the buffer using `libsodium`
+	}
+}
 
+Movin the data
 
-Phase 4:
+we will create a UDP socket to move the data to the VPS
+sendto() the server IP
 
+On the server side
+we will write to `write()` the decrpted data into server's TUN interface
+we will enable MASQUERADE (NAT) in iptables (stamps the packet)
