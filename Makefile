@@ -1,7 +1,7 @@
 # Author: Ahmed Bouzaffour 2025-12-08
 
 CC = gcc
-CFLAGS = -wall -Wextra -Iinclude
+CFLAGS = -Wall -Wextra -Iinclude
 LDFLAGS = -lsodium
 
 SRC_DIR = src
