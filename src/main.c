@@ -12,6 +12,7 @@ main()
 {
 
 	char tun_name[IFNAMSIZ];	// interface name
+	char buffer[MTU];		// the raw packet data
 	
 	/*set the desired name*/
 	strcpy(tun_name, "tun0");
@@ -28,9 +29,33 @@ main()
 
 	printf("[SUCCESS] Interface '%s' allocated. FD: %d\n", tun_name, tun_fd);
 
+	char cmd[256];
+	sprintf(cmd, "ip addr add 10.0.0.1/24 dev %s && ip link set %s up",
+			tun_name, tun_name);
+	
+	printf("[INFO] Running command: %s\n", cmd);
+	system(cmd);
+	
+	printf("[INFO] Interface configured. Listening for packets...\n");
+
+	/*reading loop*/
 	while(1)
 	{
-		sleep(10);
+		/*blocks until the kernel has a packet*/
+		ssize_t nread;
+
+		nread = read(tun_fd, buffer, sizeof(buffer));
+		if (nread < 0)
+		{
+			perror("[PANIC] reading from interface");
+			close(tun_fd);
+			exit(1);
+		}
+		
+		printf("[PACKET] Read %ld bytes from tunnel\n", nread);
+		if (nread > 0) {
+			printf("         First byte: 0x%02X\n", (unsigned char)buffer[0]);
+		}
 	}
 	return 0;
 }

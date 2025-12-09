@@ -10,7 +10,8 @@ encapsulates them in UDP datagrams for transport
 Getting the data
 
 in linux everything is a file
-we need to open `dev/net/tun` to get the file descriptor
+`dev/net/tun`: Character Device (it processes data as a stream of bytes)
+=> when we open 'dev/net/tun': we spawn a new viritual network interface
 
 #include <sys/ioctl.h>
 + `ioctl()`
