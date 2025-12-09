@@ -32,3 +32,4 @@ Once it's running, open a new terminal and force traffic through the tunnel:
 sudo ip route add 8.8.8.8 dev tun0
 ping 8.8.8.8
 ```
+![2025-12-08 21-16-07-VEED](https://github.com/user-attachments/assets/87accba0-8094-4d82-b2f4-98aa1ce8c47d)
