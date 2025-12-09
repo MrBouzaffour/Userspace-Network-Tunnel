@@ -13,7 +13,9 @@ main()
 
 	char tun_name[IFNAMSIZ];	// interface name
 	char buffer[MTU];		// the raw packet data
-	
+	struct sockaddr_in dest_addr;
+	int sock_fd;
+
 	/*set the desired name*/
 	strcpy(tun_name, "tun0");
 
@@ -29,33 +31,74 @@ main()
 
 	printf("[SUCCESS] Interface '%s' allocated. FD: %d\n", tun_name, tun_fd);
 
+	/* running a shell commands to assign an IP (10.0.0.1)*/
 	char cmd[256];
 	sprintf(cmd, "ip addr add 10.0.0.1/24 dev %s && ip link set %s up",
 			tun_name, tun_name);
-	
 	printf("[INFO] Running command: %s\n", cmd);
 	system(cmd);
-	
-	printf("[INFO] Interface configured. Listening for packets...\n");
 
+	/* UDP socket */
+	printf("[INFO] Creating UDP socket... \n");
+	sock_fd = udp_create_socket();
+	if (sock_fd < 0)
+	{
+		fprintf(stderr, "[PANIC] failed to create a UDP socket\n");
+	}
+
+	/*Setting up the destination*/
+	memset(&dest_addr, 0, sizeof(dest_addr));
+	
+	dest_addr.sin_family = AF_INET;
+	dest_addr.sin_port = htons(PORT);
+	inet_pton(AF_INET, SERVER_IP, &dest_addr.sin_addr);
+
+	printf("[INFO] Tunnel is UP. Forwarding packets to %s:%d\n", SERVER_IP, PORT);
+	
+	fd_set read_set;
+	int max_fd = (tun_fd > sock_fd) ? tun_fd : sock_fd;
+	
 	/*reading loop*/
 	while(1)
 	{
-		/*blocks until the kernel has a packet*/
-		ssize_t nread;
+		/* Reset*/
+		FD_ZERO(&read_set);
+		FD_SET(tun_fd, &read_set);
+		FD_SET(sock_fd, &read_set);
+// Wait for data on EITHER interface
+        int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
 
-		nread = read(tun_fd, buffer, sizeof(buffer));
-		if (nread < 0)
-		{
-			perror("[PANIC] reading from interface");
-			close(tun_fd);
-			exit(1);
-		}
-		
-		printf("[PACKET] Read %ld bytes from tunnel\n", nread);
-		if (nread > 0) {
-			printf("         First byte: 0x%02X\n", (unsigned char)buffer[0]);
-		}
-	}
-	return 0;
+        if (activity < 0) {
+            perror("[ERROR] Select failed");
+            break;
+        }
+
+        // EVENT A: Packet from Kernel (TUN) -> Send to UDP
+        if (FD_ISSET(tun_fd, &read_set)) {
+            ssize_t len = read(tun_fd, buffer, sizeof(buffer));
+            if (len > 0) {
+                // In Phase 3, we will ENCRYPT here.
+                // For now, send plaintext.
+                sendto(sock_fd, buffer, len, 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
+                printf("[OUT] Forwarded %ld bytes to UDP\n", len);
+            }
+        }
+
+        // EVENT B: Packet from UDP (Internet) -> Write to Kernel
+        if (FD_ISSET(sock_fd, &read_set)) {
+            struct sockaddr_in src_addr;
+            socklen_t addr_len = sizeof(src_addr);
+            ssize_t len = recvfrom(sock_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &addr_len);
+            
+            if (len > 0) {
+                // In Phase 3, we will DECRYPT here.
+                write(tun_fd, buffer, len);
+                printf("[IN] Received %ld bytes from UDP\n", len);
+            }
+        }
+    }
+
+    close(tun_fd);
+    close(sock_fd);
+    return 0;
 }
