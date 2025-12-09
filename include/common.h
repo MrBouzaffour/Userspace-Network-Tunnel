@@ -33,5 +33,11 @@ int tun_alloc(char *dev);
 
 int udp_create_socket();
 
+
+void crypto_init();
+int encrypt_packet(unsigned char *plain, int len, unsigned char *cipher);
+int decrypt_packet(unsigned char *cipher, int len, unsigned char *plain);
+
+
 #endif
 

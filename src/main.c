@@ -18,6 +18,10 @@ main()
 
 	/*set the desired name*/
 	strcpy(tun_name, "tun0");
+	
+	/*initilize Crypto*/
+	crypto_init();
+
 
 	printf("[INFO] attempting to create TUN device...\n");
 	
@@ -57,8 +61,11 @@ main()
 	
 	fd_set read_set;
 	int max_fd = (tun_fd > sock_fd) ? tun_fd : sock_fd;
-	
-	/*reading loop*/
+
+	// Encrypted buffer with extra space for Nonce (24) + MAC (16)
+	unsigned char encrypted_buffer[MTU + 100];
+
+	/* main loop*/
 	while(1)
 	{
 		int activity;
@@ -85,16 +92,24 @@ main()
 			
 			if (len > 0) 
 			{
-                // In Phase 3, we will ENCRYPT here.
-                // For now, send plaintext.
-			sendto( sock_fd,
-				buffer,
-			       	len,
-			       	0,
-			       	(struct sockaddr*)&dest_addr,
-			       	sizeof(dest_addr)
-				);
-			printf("[OUT] Forwarded %ld bytes to UDP\n", len);
+				/* ENCRYPT */
+				int enc_len;
+			       	enc_len = encrypt_packet(
+						(unsigned char*)buffer, 
+						len, 
+						encrypted_buffer);
+				
+				if (enc_len > 0) 
+				{
+					sendto(
+					 	sock_fd, 
+						encrypted_buffer, 
+						enc_len, 
+						0, 
+						(struct sockaddr*)&dest_addr, 
+						sizeof(dest_addr));
+					printf("[OUT] Encrypted %ld bytes -> %d bytes sent\n", len, enc_len);
+				}
 			}
 		}
 		
@@ -102,6 +117,7 @@ main()
 		if (FD_ISSET(sock_fd, &read_set)) 
 		{
 			struct sockaddr_in src_addr;
+			ssize_t len;
 			socklen_t addr_len;
 		    	addr_len = sizeof(src_addr);
 			
@@ -113,9 +129,20 @@ main()
 				       &addr_len);
 			if (len > 0)
 			{
-                // In Phase 3, we will DECRYPT here
-				write(tun_fd, buffer, len);
-				printf("[IN] Received %ld bytes from UDP\n", len);
+                		int dec_len;
+			       	dec_len = decrypt_packet(
+						encrypted_buffer, 
+						len, 
+						(unsigned char*)buffer);
+				
+				if (dec_len > 0) 
+				{
+					write(tun_fd, buffer, dec_len);
+					printf("[IN] Decrypted %ld bytes -> %d bytes to Kernel\n", len, dec_len);
+				} else 
+				{
+					printf("[ERROR] Decryption failed!\n");
+				}
 			}
 		}
 	}
