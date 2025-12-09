@@ -1,4 +1,5 @@
 # My Custom Userspace VPN
+still working on it
 I don't like the idea of the local network admin seeing every DNS lookup I make.
 I decided to build my own VPN from scratch in C to learn how this stuff actually works under the hood.
 
