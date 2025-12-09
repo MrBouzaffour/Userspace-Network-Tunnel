@@ -1,4 +1,7 @@
-/* Author: Ahmed Bouzaffour 2025-12-08*/
+/* Author: Ahmed Bouzaffour 2025-12-08
+ * This file contains the standard libraries required for Linux
+ * Networking and the function prototypes
+ * */
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -7,13 +10,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <linux/if.h>
-#include <linux/if_tun.h>
 
+#include <arpa/inet.h>		// inet_addr, htons
+#include <fcntl.h>		// open, O_RDWR
+#include <sys/ioctl.h>		// ioctl
+#include <sys/socket.h>		// socket, bind, connect
+#include <linux/if.h>		// struct ifreq
+#include <linux/if_tun.h>	// IFF_TUN, IFF_NO_PI (Tunnel flags)
+
+#define MTU 1400		// max transmission unit
+#define PORT 55555		// The UDP port where the server listens
+
+/*
+ * *Allocates a TUN interface.
+ *	param:
+ *		dev:  The name of the device (e.g., "tun0") (Can be empty)
+ * 	return:
+ * 		int File Descriptor (fd) on success, -1 on error.
+ */
 int tun_alloc(char *dev);
 
 #endif
