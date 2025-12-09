@@ -61,42 +61,64 @@ main()
 	/*reading loop*/
 	while(1)
 	{
+		int activity;
 		/* Reset*/
 		FD_ZERO(&read_set);
 		FD_SET(tun_fd, &read_set);
 		FD_SET(sock_fd, &read_set);
-// Wait for data on EITHER interface
-        int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
 
-        if (activity < 0) {
-            perror("[ERROR] Select failed");
-            break;
-        }
-
-        // EVENT A: Packet from Kernel (TUN) -> Send to UDP
-        if (FD_ISSET(tun_fd, &read_set)) {
-            ssize_t len = read(tun_fd, buffer, sizeof(buffer));
-            if (len > 0) {
+		/* wait for data on either interface*/
+		
+		activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
+		
+		if (activity < 0)
+		{
+			perror("[Panic] Select failed");
+			break;
+		}
+		
+		/* EVENT A: Packet from Kernel (TUN) -> Send to UDP*/
+		if (FD_ISSET(tun_fd, &read_set))
+		{
+			ssize_t len;
+			len = read( tun_fd, buffer, sizeof(buffer));
+			
+			if (len > 0) 
+			{
                 // In Phase 3, we will ENCRYPT here.
                 // For now, send plaintext.
-                sendto(sock_fd, buffer, len, 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
-                printf("[OUT] Forwarded %ld bytes to UDP\n", len);
-            }
-        }
-
-        // EVENT B: Packet from UDP (Internet) -> Write to Kernel
-        if (FD_ISSET(sock_fd, &read_set)) {
-            struct sockaddr_in src_addr;
-            socklen_t addr_len = sizeof(src_addr);
-            ssize_t len = recvfrom(sock_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &addr_len);
-            
-            if (len > 0) {
-                // In Phase 3, we will DECRYPT here.
-                write(tun_fd, buffer, len);
-                printf("[IN] Received %ld bytes from UDP\n", len);
-            }
-        }
-    }
+			sendto( sock_fd,
+				buffer,
+			       	len,
+			       	0,
+			       	(struct sockaddr*)&dest_addr,
+			       	sizeof(dest_addr)
+				);
+			printf("[OUT] Forwarded %ld bytes to UDP\n", len);
+			}
+		}
+		
+		/* EVENT B: Packet from UDP (Internet) -> Write to Kernel */
+		if (FD_ISSET(sock_fd, &read_set)) 
+		{
+			struct sockaddr_in src_addr;
+			socklen_t addr_len;
+		    	addr_len = sizeof(src_addr);
+			
+			len = recvfrom(sock_fd,
+				       buffer, 
+				       sizeof(buffer), 
+				       0, 
+				       (struct sockaddr*)&src_addr, 
+				       &addr_len);
+			if (len > 0)
+			{
+                // In Phase 3, we will DECRYPT here
+				write(tun_fd, buffer, len);
+				printf("[IN] Received %ld bytes from UDP\n", len);
+			}
+		}
+	}
 
     close(tun_fd);
     close(sock_fd);
