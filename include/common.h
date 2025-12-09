@@ -18,9 +18,9 @@
 #include <linux/if.h>		// struct ifreq
 #include <linux/if_tun.h>	// IFF_TUN, IFF_NO_PI (Tunnel flags)
 
-#define MTU 1400		// max transmission unit
-#define PORT 55555		// The UDP port where the server listens
-
+#define MTU 	  1400		// max transmission unit
+#define PORT      55555		// The UDP port where the server listens
+#define SERVER_IP "127.0.0.1"	// IP address
 /*
  * *Allocates a TUN interface.
  *	param:
@@ -29,6 +29,9 @@
  * 		int File Descriptor (fd) on success, -1 on error.
  */
 int tun_alloc(char *dev);
+
+
+int udp_create_socket();
 
 #endif
 
